@@ -665,6 +665,7 @@ function showError(msg){
 
 // UNLOCK FULL REPORT
 async function unlockReport(){
+  console.log("FIRST unlockReport");
   const btn=document.getElementById('unlockBtn');
   btn.disabled=true;btn.textContent='Generating...';
 
@@ -715,6 +716,7 @@ function showFullReport(d){
 </script>
 <script>
 function unlockReport() {
+  console.log("SECOND unlockReport");
   var clientId = "AVUmT4JCxXATegg8Q0RsYVYHI5hDJmur3TtL2HB3ppeqk1K0SC9yV3eOuWxjD0le40BLXyq-JxqbvTcO";
   var btn = document.getElementById("unlockBtn");
   var container = document.getElementById("paypal-container");
