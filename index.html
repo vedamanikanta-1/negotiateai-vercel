@@ -768,5 +768,106 @@ async function generateFullReport() {
   }
 }
 </script>
+  <script>
+document.getElementById("unlockBtn").addEventListener("click", function() {
+  var btn = document.getElementById("unlockBtn");
+  var container = document.getElementById("paypal-container");
+  
+  btn.disabled = true;
+  btn.textContent = "Loading PayPal...";
+
+  // Remove any existing PayPal script
+  var existing = document.getElementById("pp-sdk");
+  if (existing) existing.remove();
+  delete window.paypal;
+
+  container.innerHTML = "";
+  container.style.display = "block";
+  btn.style.display = "none";
+
+  var s = document.createElement("script");
+  s.id = "pp-sdk";
+  s.src = "https://www.paypal.com/sdk/js?client-id=AVUmT4JCxXATegg8Q0RsYVYHI5hDJmur3TtL2HB3ppeqk1K0SC9yV3eOuWxjD0le40BLXyq-JxqbvTcO&currency=USD";
+  
+  s.onload = function() {
+    console.log("PayPal loaded OK");
+    paypal.Buttons({
+      createOrder: function() {
+        console.log("Creating order...");
+        return fetch("/api/create-order", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: "{}"
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          console.log("Order response:", d);
+          if (!d.orderID) throw new Error(JSON.stringify(d));
+          return d.orderID;
+        });
+      },
+      onApprove: function(data) {
+        container.innerHTML = "<p style='color:#a78bfa;text-align:center;padding:20px'>Processing payment...</p>";
+        return fetch("/api/capture-order", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({orderID: data.orderID})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(result) {
+          console.log("Capture result:", result);
+          if (result.success) {
+            container.style.display = "none";
+            generateFullReport();
+          } else {
+            alert("Payment failed: " + JSON.stringify(result));
+            btn.disabled = false;
+            btn.textContent = "Unlock Full Report - Rs.199";
+            btn.style.display = "block";
+            container.style.display = "none";
+          }
+        });
+      },
+      onCancel: function() {
+        console.log("Cancelled");
+        btn.disabled = false;
+        btn.textContent = "Unlock Full Report - Rs.199";
+        btn.style.display = "block";
+        container.style.display = "none";
+      },
+      onError: function(err) {
+        console.error("PayPal error:", JSON.stringify(err));
+        alert("PayPal Error: " + JSON.stringify(err));
+        btn.disabled = false;
+        btn.textContent = "Unlock Full Report - Rs.199";
+        btn.style.display = "block";
+        container.style.display = "none";
+      }
+    }).render("#paypal-container")
+    .then(function() {
+      console.log("Button rendered successfully!");
+    })
+    .catch(function(err) {
+      console.error("Render failed:", err);
+      alert("Button render failed: " + err.message);
+      btn.disabled = false;
+      btn.textContent = "Unlock Full Report - Rs.199";
+      btn.style.display = "block";
+      container.style.display = "none";
+    });
+  };
+
+  s.onerror = function() {
+    console.error("PayPal SDK failed to load!");
+    alert("PayPal SDK failed. Check console.");
+    btn.disabled = false;
+    btn.textContent = "Unlock Full Report - Rs.199";
+    btn.style.display = "block";
+    container.style.display = "none";
+  };
+
+  document.body.appendChild(s);
+});
+</script>
 </body>
 </html>
