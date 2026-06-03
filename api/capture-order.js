@@ -23,6 +23,7 @@ module.exports = async function handler(req, res) {
     });
 
     const authData = await authRes.json();
+console.log("PayPal Auth Response:", authData);
 
     const captureRes = await fetch(
       "https://api-m.sandbox.paypal.com/v2/checkout/orders/" + orderID + "/capture",
