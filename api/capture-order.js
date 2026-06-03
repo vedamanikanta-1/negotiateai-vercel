@@ -8,12 +8,6 @@ module.exports = async function handler(req, res) {
 
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const secret = process.env.PAYPAL_SECRET;
-  return res.status(200).json({
-  clientIdExists: !!clientId,
-  secretExists: !!secret,
-  clientIdLength: clientId ? clientId.length : 0,
-  secretLength: secret ? secret.length : 0
-});
   const { orderID } = req.body;
 
   try {
