@@ -49,10 +49,8 @@ module.exports = async function handler(req, res) {
    const orderData = await orderRes.json();
 
 if (!orderData.id) {
-  return res.status(500).json({
-    error: "No order ID",
-    details: orderData
-  });
+  console.log("PAYPAL ORDER ERROR:", JSON.stringify(orderData));
+  return res.status(500).json(orderData);
 }
 
     return res.status(200).json({ orderID: orderData.id });
