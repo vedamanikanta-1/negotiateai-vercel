@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         intent: "CAPTURE",
         purchase_units: [{
-          amount: { currency_code: "USD", value: "2.40" },
+          amount: { currency_code: "EUR", value: "2.40" },
           description: "NegotiateAI Full Report"
         }]
       })
