@@ -692,6 +692,17 @@ async function unlockReport(){
 }
 
 function showFullReport(d){
+  console.log("showFullReport started");
+
+console.log("companyTable", document.getElementById('companyTable'));
+console.log("sOpening", document.getElementById('sOpening'));
+console.log("sAsked", document.getElementById('sAsked'));
+console.log("sCounter", document.getElementById('sCounter'));
+console.log("sClosing", document.getElementById('sClosing'));
+console.log("rEval", document.getElementById('rEval'));
+console.log("rActions", document.getElementById('rActions'));
+console.log("rFlags", document.getElementById('rFlags'));
+console.log("rSkills", document.getElementById('rSkills'));
   // Company table
   const tbody=document.getElementById('companyTable');
   tbody.innerHTML=(d.companyWiseSalaries||[]).map(c=>`<tr><td>${c.company}</td><td style="color:var(--lavender);font-weight:500">${c.range}</td><td style="color:var(--gray);font-size:.8rem">${c.notes}</td></tr>`).join('');
