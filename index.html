@@ -770,7 +770,7 @@ function unlockReport() {
 async function generateFullReport() {
   var p = window._userProfile;
   var reportDiv = document.getElementById("fullReport");
-  reportDiv.innerHTML = "<div style='text-align:center;padding:20px;color:#a78bfa'><div class='spinner' style='margin:0 auto 10px'></div>Generating your full report...</div>";
+  console.log("Generating report...");
   reportDiv.classList.add("show");
   try {
     var res = await fetch("/api/full-report", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(p) });
