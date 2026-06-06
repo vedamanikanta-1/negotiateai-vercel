@@ -770,16 +770,64 @@ function unlockReport() {
 }
 async function generateFullReport() {
   var p = window._userProfile;
-  var reportDiv = document.getElementById("fullReport");
-  reportDiv.innerHTML = "<div style='text-align:center;padding:20px;color:#a78bfa'><div class='spinner' style='margin:0 auto 10px'></div>Generating your full report...</div>";
-  reportDiv.classList.add("show");
+  if(!p) { alert("Profile data lost. Please fill the form again."); return; }
+
+  var existing = document.getElementById("fullReport");
+  if(existing) existing.remove();
+
+  var reportDiv = document.createElement("div");
+  reportDiv.id = "fullReport";
+  reportDiv.className = "report show";
+  reportDiv.innerHTML = "<div style='text-align:center;padding:30px;color:#a78bfa'><div class='spinner' style='margin:0 auto 14px'></div><p>Generating your full report...</p></div>";
+
+  var paypalContainer = document.getElementById("paypal-container");
+  paypalContainer.parentNode.insertBefore(reportDiv, paypalContainer.nextSibling);
+
   try {
     var res = await fetch("/api/full-report", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(p) });
     var json = await res.json();
-    if (json.success) { showFullReport(json.data); }
-    else { reportDiv.innerHTML = "<p style='color:red;text-align:center'>Report failed: " + json.error + "</p>"; }
+    console.log("Full report response:", json);
+    if(json.success) {
+      var d = json.data;
+      reportDiv.innerHTML = `
+        <div class="report-section">
+          <div class="rs-title">🏢 Company-wise Salary Breakdown</div>
+          <table class="company-table">
+            <thead><tr><th>Company</th><th>Salary Range</th><th>Notes</th></tr></thead>
+            <tbody>${(d.companyWiseSalaries||[]).map(c=>`<tr><td>${c.company}</td><td style="color:var(--lavender);font-weight:500">${c.range}</td><td style="color:var(--gray);font-size:.8rem">${c.notes}</td></tr>`).join('')}</tbody>
+          </table>
+        </div>
+        <div class="report-section">
+          <div class="rs-title">🗣️ Your Negotiation Script</div>
+          <div class="script-block"><div class="script-label">Opening Statement</div><div class="script-text">${d.negotiationScript?.opening||''}</div></div>
+          <div class="script-block"><div class="script-label">When HR Asks Your Salary</div><div class="script-text">${d.negotiationScript?.whenAsked||''}</div></div>
+          <div class="script-block"><div class="script-label">Counter a Low Offer</div><div class="script-text">${d.negotiationScript?.counterOffer||''}</div></div>
+          <div class="script-block"><div class="script-label">Closing Statement</div><div class="script-text">${d.negotiationScript?.closing||''}</div></div>
+        </div>
+        <div class="report-section">
+          <div class="rs-title">📊 Offer Evaluation</div>
+          <div class="eval-text">${d.offerEvaluation||''}</div>
+        </div>
+        <div class="report-section">
+          <div class="rs-title">✅ Action Plan</div>
+          <ul class="action-list">${(d.actionPlan||[]).map(a=>`<li>${a}</li>`).join('')}</ul>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="report-section">
+            <div class="rs-title">⚠️ Red Flags</div>
+            <ul class="flag-list">${(d.redFlags||[]).map(f=>`<li>${f}</li>`).join('')}</ul>
+          </div>
+          <div class="report-section">
+            <div class="rs-title">📈 Skills to Add</div>
+            <ul class="skills-list">${(d.skillsToAdd||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
+          </div>
+        </div>`;
+      reportDiv.scrollIntoView({behavior:'smooth'});
+    } else {
+      reportDiv.innerHTML = `<p style='color:red;text-align:center;padding:20px'>Report failed: ${json.error}</p>`;
+    }
   } catch(err) {
-    reportDiv.innerHTML = "<p style='color:red;text-align:center'>Error: " + err.message + "</p>";
+    reportDiv.innerHTML = `<p style='color:red;text-align:center;padding:20px'>Error: ${err.message}</p>`;
   }
 }
 </script>
