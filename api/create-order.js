@@ -39,22 +39,24 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         intent: "CAPTURE",
-          purchase_units: [{
-            amount: { currency_code: "INR", value: "199" },
+        purchase_units: [{
+          amount: {
+            currency_code: "INR",
+            value: "199"
+          },
+          description: "NegotiateAI Full Report"
         }]
       })
     });
 
-   const orderData = await orderRes.json();
+    const orderData = await orderRes.json();
 
-if (!orderData.id) {
-  return res.status(500).json({
-    error: "No order ID",
-    details: orderData
-  });
-}
+    if (!orderData.id) {
+      return res.status(500).json({ error: "No order ID", details: orderData });
+    }
 
     return res.status(200).json({ orderID: orderData.id });
+
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
