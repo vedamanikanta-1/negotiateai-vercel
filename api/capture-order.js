@@ -13,7 +13,7 @@ module.exports = async function handler(req, res) {
   try {
     const authString = Buffer.from(clientId + ":" + secret).toString("base64");
 
-    const authRes = await fetch("https://api-m.paypal.com/v1/oauth2/token", {
+    const authRes = await fetch("https://api-m.sandbox.paypal.com/v1/oauth2/token", {
       method: "POST",
       headers: {
         "Authorization": "Basic " + authString,
@@ -26,7 +26,7 @@ module.exports = async function handler(req, res) {
 console.log("PayPal Auth Response:", authData);
 
     const captureRes = await fetch(
-      "https://api-m.paypal.com/v2/checkout/orders/" + orderID + "/capture",
+      "https://api-m.sandbox.paypal.com/v2/checkout/orders/" + orderID + "/capture",
       {
         method: "POST",
         headers: {
