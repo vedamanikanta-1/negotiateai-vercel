@@ -39,9 +39,16 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         intent: "CAPTURE",
-        purchase_units: [{
-          amount: { currency_code: "INR", value: "199" },
-          description: "NegotiateAI Full Report"
+purchase_units: [{
+  amount: { currency_code: "INR", value: "199" },
+  description: "NegotiateAI Full Report"
+}],
+application_context: {
+  brand_name: "NegotiateAI",
+  locale: "en-IN",
+  landing_page: "BILLING",
+  user_action: "PAY_NOW"
+}
         }]
       })
     });
