@@ -693,39 +693,40 @@ async function unlockReport(){
 
 function showFullReport(d){
   console.log("showFullReport started");
-
-console.log("companyTable", document.getElementById('companyTable'));
-console.log("sOpening", document.getElementById('sOpening'));
-console.log("sAsked", document.getElementById('sAsked'));
-console.log("sCounter", document.getElementById('sCounter'));
-console.log("sClosing", document.getElementById('sClosing'));
-console.log("rEval", document.getElementById('rEval'));
-console.log("rActions", document.getElementById('rActions'));
-console.log("rFlags", document.getElementById('rFlags'));
-console.log("rSkills", document.getElementById('rSkills'));
+  
   // Company table
-  const tbody=document.getElementById('companyTable');
-  tbody.innerHTML=(d.companyWiseSalaries||[]).map(c=>`<tr><td>${c.company}</td><td style="color:var(--lavender);font-weight:500">${c.range}</td><td style="color:var(--gray);font-size:.8rem">${c.notes}</td></tr>`).join('');
+  const tbody = document.getElementById('companyTable');
+  if(tbody) tbody.innerHTML = (d.companyWiseSalaries||[]).map(c=>`<tr><td>${c.company}</td><td style="color:var(--lavender);font-weight:500">${c.range}</td><td style="color:var(--gray);font-size:.8rem">${c.notes}</td></tr>`).join('');
 
   // Scripts
-  document.getElementById('sOpening').textContent=d.negotiationScript.opening;
-  document.getElementById('sAsked').textContent=d.negotiationScript.whenAsked;
-  document.getElementById('sCounter').textContent=d.negotiationScript.counterOffer;
-  document.getElementById('sClosing').textContent=d.negotiationScript.closing;
+  const sOpening = document.getElementById('sOpening');
+  const sAsked = document.getElementById('sAsked');
+  const sCounter = document.getElementById('sCounter');
+  const sClosing = document.getElementById('sClosing');
+  if(sOpening) sOpening.textContent = d.negotiationScript.opening;
+  if(sAsked) sAsked.textContent = d.negotiationScript.whenAsked;
+  if(sCounter) sCounter.textContent = d.negotiationScript.counterOffer;
+  if(sClosing) sClosing.textContent = d.negotiationScript.closing;
 
   // Eval
-  document.getElementById('rEval').textContent=d.offerEvaluation;
+  const rEval = document.getElementById('rEval');
+  if(rEval) rEval.textContent = d.offerEvaluation;
 
   // Lists
-  document.getElementById('rActions').innerHTML=(d.actionPlan||[]).map(a=>`<li>${a}</li>`).join('');
-  document.getElementById('rFlags').innerHTML=(d.redFlags||[]).map(f=>`<li>${f}</li>`).join('');
-  document.getElementById('rSkills').innerHTML=(d.skillsToAdd||[]).map(s=>`<li>${s}</li>`).join('');
+  const rActions = document.getElementById('rActions');
+  const rFlags = document.getElementById('rFlags');
+  const rSkills = document.getElementById('rSkills');
+  if(rActions) rActions.innerHTML = (d.actionPlan||[]).map(a=>`<li>${a}</li>`).join('');
+  if(rFlags) rFlags.innerHTML = (d.redFlags||[]).map(f=>`<li>${f}</li>`).join('');
+  if(rSkills) rSkills.innerHTML = (d.skillsToAdd||[]).map(s=>`<li>${s}</li>`).join('');
 
-  document.getElementById('fullReport').classList.add('show');
-  setTimeout(()=>document.getElementById('fullReport').scrollIntoView({behavior:'smooth'}),100);
+  // Show report
+  const fullReport = document.getElementById('fullReport');
+  if(fullReport){
+    fullReport.classList.add('show');
+    setTimeout(()=>fullReport.scrollIntoView({behavior:'smooth'}),100);
+  }
 }
-</script>
-<script>
 function unlockReport() {
   console.log("SECOND unlockReport");
   var clientId = "AftEJyCTuo6zVwgKz71xeWAy7RkYC-HY7ZUGVgHXKX3qa8EVhs38zBfK-R7JBrAcA72A5pAil6jfTELg";
