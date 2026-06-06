@@ -41,8 +41,8 @@ module.exports = async function handler(req, res) {
         intent: "CAPTURE",
         purchase_units: [{
           amount: {
-            currency_code: "INR",
-            value: "199"
+            currency_code: "USD",
+            value: "2.40"
           },
           description: "NegotiateAI Full Report"
         }]
