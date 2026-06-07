@@ -918,14 +918,11 @@ s.src = "https://www.paypal.com/sdk/js?client-id=AcqdtIb5EA1J_yc0iu5XDd3-5iHOnkS
         btn.style.display = "block";
         container.style.display = "none";
       },
-      onError: function(err) {
-        console.error("PayPal error:", JSON.stringify(err));
-        alert("PayPal Error: " + JSON.stringify(err));
-        btn.disabled = false;
-        btn.textContent = "Unlock Full Report - Rs.199";
-        btn.style.display = "block";
-        container.style.display = "none";
-      }
+     onError: function(err) {
+  console.error("FULL PAYPAL ERROR:", err);
+  console.log("FULL PAYPAL ERROR JSON:", JSON.stringify(err, null, 2));
+  alert("PayPal Error: " + (err?.message || JSON.stringify(err)));
+}
     }).render("#paypal-container")
     .then(function() {
       console.log("Button rendered successfully!");
