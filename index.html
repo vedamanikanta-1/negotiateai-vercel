@@ -756,7 +756,17 @@ s.src = "https://www.paypal.com/sdk/js?client-id=AcqdtIb5EA1J_yc0iu5XDd3-5iHOnkS
         });
       },
       onCancel: function() { resetBtn(); },
-      onError: function(err) { console.error("PayPal error:", err); alert("PayPal Error. Check console."); resetBtn(); }
+      onError: function(err) {
+  console.error("FULL PAYPAL ERROR:", err);
+  console.log("FULL PAYPAL ERROR JSON:", JSON.stringify(err, null, 2));
+
+  alert(
+    "PayPal Error: " +
+    (err && err.message ? err.message : JSON.stringify(err))
+  );
+
+  resetBtn();
+}
     }).render("#paypal-container");
   };
   script.onerror = function() { alert("PayPal SDK failed. Check Client ID!"); resetBtn(); };
