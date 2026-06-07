@@ -738,7 +738,7 @@ function unlockReport() {
   container.style.display = "block";
   btn.style.display = "none";
   var script = document.createElement("script");
-s.src = "https://www.paypal.com/sdk/js?client-id=AftEJyCTuo6zVwgKz71xeWAy7RkYC-HY7ZUGVgHXKX3qa8EVhs38zBfK-R7JBrAcA72A5pAil6jfTELg&currency=USD&vault=false&intent=capture";
+s.src = "https://www.paypal.com/sdk/js?client-id=AcqdtIb5EA1J_yc0iu5XDd3-5iHOnkSoBGgiDVRUI-vEQNDZ8xU8UkbqcmRHgT2oSvAwiIyTdpED9Cy0&currency=USD&vault=false&intent=capture";
   script.onload = function() {
     paypal.Buttons({
       createOrder: function() {
@@ -861,7 +861,7 @@ document.getElementById("unlockBtn").addEventListener("click", function() {
 
   var s = document.createElement("script");
   s.id = "pp-sdk";
-s.src = "https://www.paypal.com/sdk/js?client-id=AftEJyCTuo6zVwgKz71xeWAy7RkYC-HY7ZUGVgHXKX3qa8EVhs38zBfK-R7JBrAcA72A5pAil6jfTELg&currency=USD&vault=false&intent=capture";
+s.src = "https://www.paypal.com/sdk/js?client-id=AcqdtIb5EA1J_yc0iu5XDd3-5iHOnkSoBGgiDVRUI-vEQNDZ8xU8UkbqcmRHgT2oSvAwiIyTdpED9Cy0&currency=USD&vault=false&intent=capture";
   s.onload = function() {
     console.log("PayPal loaded OK");
     paypal.Buttons({
