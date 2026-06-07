@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
   try {
     const authString = Buffer.from(clientId + ":" + secret).toString("base64");
 
-    const authRes = await fetch("https://api-m.sandbox.paypal.com/v1/oauth2/token", {
+    const authRes = await fetch("https://api-m.paypal.com/v1/oauth2/token", {
       method: "POST",
       headers: {
         "Authorization": "Basic " + authString,
@@ -31,7 +31,7 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: "PayPal auth failed", details: authData });
     }
 
-    const orderRes = await fetch("https://api-m.sandbox.paypal.com/v2/checkout/orders", {
+    const orderRes = await fetch("https://api-m.sandbox.com/v2/checkout/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
