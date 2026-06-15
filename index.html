@@ -583,7 +583,10 @@ footer{padding:44px 6% 28px;border-top:1px solid var(--border);}
 </footer>
 
 <script>
-function scrollTo(id){document.getElementById(id).scrollIntoView({behavior:'smooth'});}
+function scrollToSection(id){
+  var el = document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth'});
+}
 
 // SCROLL REVEAL
 const obs = new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible')}),{threshold:.1});
