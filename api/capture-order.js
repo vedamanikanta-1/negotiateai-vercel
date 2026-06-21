@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `https://test.instamojo.com/api/1.1/payment-requests/${paymentRequestId}/${paymentId}/`,
+      `https://www.instamojo.com/api/1.1/payment-requests/${paymentRequestId}/${paymentId}/`,
       {
         method: "GET",
         headers: {
