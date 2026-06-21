@@ -6,56 +6,43 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
 
-  const clientId = process.env.PAYPAL_CLIENT_ID;
-  const secret = process.env.PAYPAL_SECRET;
+  const apiKey = process.env.INSTAMOJO_API_KEY;
+  const authToken = process.env.INSTAMOJO_AUTH_TOKEN;
 
-  if (!clientId || !secret) {
-    return res.status(500).json({ error: "Missing PayPal credentials" });
+  if (!apiKey || !authToken) {
+    return res.status(500).json({ error: "Missing Instamojo credentials" });
   }
 
   try {
-    const authString = Buffer.from(clientId + ":" + secret).toString("base64");
+    const params = new URLSearchParams();
+    params.append("purpose", "NegotiateAI Full Report");
+    params.append("amount", "199");
+    params.append("buyer_name", "Customer");
+    params.append("redirect_url", "https://negotiateai-vercel.vercel.app/");
+    params.append("send_email", "false");
+    params.append("send_sms", "false");
+    params.append("allow_repeated_payments", "true");
 
-    const authRes = await fetch("https://api-m.paypal.com/v1/oauth2/token", {
+    const response = await fetch("https://test.instamojo.com/api/1.1/payment-requests/", {
       method: "POST",
       headers: {
-        "Authorization": "Basic " + authString,
+        "X-Api-Key": apiKey,
+        "X-Auth-Token": authToken,
         "Content-Type": "application/x-www-form-urlencoded"
       },
-      body: "grant_type=client_credentials"
+      body: params.toString()
     });
 
-    const authData = await authRes.json();
+    const data = await response.json();
 
-    if (!authData.access_token) {
-      return res.status(500).json({ error: "PayPal auth failed", details: authData });
+    if (!data.success) {
+      return res.status(500).json({ error: "Order creation failed", details: data });
     }
 
-    const orderRes = await fetch("https://api-m.paypal.com/v2/checkout/orders", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + authData.access_token
-      },
-      body: JSON.stringify({
-        intent: "CAPTURE",
-        purchase_units: [{
-          amount: {
-            currency_code: "USD",
-            value: "2.40"
-          },
-          description: "NegotiateAI Full Report"
-        }]
-      })
+    return res.status(200).json({
+      paymentRequestId: data.payment_request.id,
+      paymentUrl: data.payment_request.longurl
     });
-
-    const orderData = await orderRes.json();
-
-    if (!orderData.id) {
-      return res.status(500).json({ error: "No order ID", details: orderData });
-    }
-
-    return res.status(200).json({ orderID: orderData.id });
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
