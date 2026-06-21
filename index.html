@@ -859,239 +859,202 @@ reportDiv.appendChild(downloadBar);
 document.getElementById("unlockBtn").addEventListener("click", function() {
   var btn = document.getElementById("unlockBtn");
   var container = document.getElementById("paypal-container");
-  
+
   btn.disabled = true;
-  btn.textContent = "Loading PayPal...";
-
-  // Remove any existing PayPal script
-  var existing = document.getElementById("pp-sdk");
-  if (existing) existing.remove();
-  delete window.paypal;
-
-  container.innerHTML = "";
+  btn.textContent = "Creating payment link...";
+  container.innerHTML = "<div style='text-align:center;padding:20px;color:#a78bfa'><div class='spinner' style='margin:0 auto 10px'></div><p>Setting up payment...</p></div>";
   container.style.display = "block";
   btn.style.display = "none";
 
-  var s = document.createElement("script");
-  s.id = "pp-sdk";
-s.src = "https://www.paypal.com/sdk/js?client-id=AcqdtIb5EA1J_yc0iu5XDd3-5iHOnkSoBGgiDVRUI-vEQNDZ8xU8UkbqcmRHgT2oSvAwiIyTdpED9Cy0&currency=USD&vault=false&intent=capture";
-  s.onload = function() {
-    console.log("PayPal loaded OK");
-    paypal.Buttons({
-      createOrder: function() {
-        console.log("Creating order...");
-        return fetch("/api/create-order", {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: "{}"
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          console.log("Order response:", d);
-          if (!d.orderID) throw new Error(JSON.stringify(d));
-          return d.orderID;
-        });
-      },
-      onApprove: function(data) {
-        container.innerHTML = "<p style='color:#a78bfa;text-align:center;padding:20px'>Processing payment...</p>";
-        return fetch("/api/capture-order", {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({orderID: data.orderID})
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(result) {
-          console.log("Capture result:", result);
-          if (result.success) {
-            container.style.display = "none";
-            generateFullReport();
-          } else {
-            alert("Payment failed: " + JSON.stringify(result));
-            btn.disabled = false;
-            btn.textContent = "Unlock Full Report - Rs.199";
-            btn.style.display = "block";
-            container.style.display = "none";
-          }
-        });
-      },
-      onCancel: function() {
-        console.log("Cancelled");
-        btn.disabled = false;
-        btn.textContent = "Unlock Full Report - Rs.199";
-        btn.style.display = "block";
-        container.style.display = "none";
-      },
-     onError: function(err) {
-  console.error("FULL PAYPAL ERROR:", err);
-  console.log("FULL PAYPAL ERROR JSON:", JSON.stringify(err, null, 2));
-  alert("PayPal Error: " + (err?.message || JSON.stringify(err)));
-}
-    }).render("#paypal-container")
-    .then(function() {
-      console.log("Button rendered successfully!");
-    })
-    .catch(function(err) {
-      console.error("Render failed:", err);
-      alert("Button render failed: " + err.message);
-      btn.disabled = false;
-      btn.textContent = "Unlock Full Report - Rs.199";
-      btn.style.display = "block";
-      container.style.display = "none";
-    });
-  };
+  fetch("/api/create-order", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: "{}"
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    console.log("Payment link created:", data);
+    if (!data.paymentUrl) throw new Error(JSON.stringify(data));
 
-  s.onerror = function() {
-    console.error("PayPal SDK failed to load!");
-    alert("PayPal SDK failed. Check console.");
-    btn.disabled = false;
-    btn.textContent = "Unlock Full Report - Rs.199";
-    btn.style.display = "block";
-    container.style.display = "none";
-  };
+    window._paymentRequestId = data.paymentRequestId;
 
-  document.body.appendChild(s);
+    container.innerHTML =
+      "<div style='background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;text-align:center;max-width:380px;margin:0 auto;'>" +
+      "<p style='color:var(--lavender);font-size:1rem;margin-bottom:16px;'>💳 Complete Your Payment (TEST MODE)</p>" +
+      "<a href='" + data.paymentUrl + "' target='_blank' style='display:inline-block;background:linear-gradient(135deg,#7c3aed,#9d5ff5);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-family:DM Sans,sans-serif;font-size:1rem;font-weight:500;margin-bottom:16px;'>" +
+      "Pay ₹199 via Instamojo →</a>" +
+      "<p style='color:var(--gray);font-size:.85rem;margin-bottom:14px;'>Test card: 4111 1111 1111 1111</p>" +
+      "<button onclick='verifyInstamojoPayment()' style='width:100%;background:transparent;border:1px solid var(--border);color:var(--white);padding:12px;border-radius:10px;cursor:pointer;font-family:DM Sans,sans-serif;font-size:.9rem;'>" +
+      "✅ I've Completed Payment</button>" +
+      "</div>";
+  })
+  .catch(function(err) {
+    alert("Payment setup failed: " + err.message);
+    resetBtn(btn, container);
+  });
 });
-    function downloadPDF() {
-  var btn = event.target;
-  btn.textContent = "Generating PDF...";
-  btn.disabled = true;
 
-  var reportDiv = document.getElementById("fullReport");
-  var content = reportDiv.innerText;
+function verifyInstamojoPayment() {
+  var container = document.getElementById("paypal-container");
+  var btn = document.getElementById("unlockBtn");
+
+  var urlParams = new URLSearchParams(window.location.search);
+  var paymentId = urlParams.get("payment_id") || prompt("Enter Payment ID from confirmation page:");
+
+  if (!paymentId) {
+    alert("Payment ID required to verify.");
+    return;
+  }
+
+  container.innerHTML = "<div style='text-align:center;padding:20px;color:#a78bfa'><div class='spinner' style='margin:0 auto 10px'></div><p>Verifying payment...</p></div>";
+
+  fetch("/api/capture-order", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      paymentRequestId: window._paymentRequestId,
+      paymentId: paymentId
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(result) {
+    console.log("Verification result:", result);
+    if (result.success) {
+      container.style.display = "none";
+      generateFullReport();
+    } else {
+      alert("Payment verification failed. Check Payment ID and try again.");
+      resetBtn(btn, container);
+    }
+  })
+  .catch(function(err) {
+    alert("Verification error: " + err.message);
+    resetBtn(btn, container);
+  });
+}
+
+function resetBtn(btn, container) {
+  btn.disabled = false;
+  btn.textContent = "Unlock Full Report - Rs.199";
+  btn.style.display = "block";
+  container.style.display = "none";
+  container.innerHTML = "";
+}
+
+async function generateFullReport() {
+  var p = window._userProfile;
+  if(!p) { alert("Profile data lost. Please fill the form again."); return; }
+
+  var existing = document.getElementById("fullReport");
+  if(existing) existing.remove();
+
+  var reportDiv = document.createElement("div");
+  reportDiv.id = "fullReport";
+  reportDiv.className = "report show";
+  reportDiv.innerHTML = "<div style='text-align:center;padding:30px;color:#a78bfa'><div class='spinner' style='margin:0 auto 14px'></div><p>Generating your full report...</p></div>";
+
+  var paypalContainer = document.getElementById("paypal-container");
+  paypalContainer.parentNode.insertBefore(reportDiv, paypalContainer.nextSibling);
+
+  try {
+    var res = await fetch("/api/full-report", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(p)
+    });
+    var json = await res.json();
+    if(json.success) {
+      var d = json.data;
+      reportDiv.innerHTML = `
+        <div class="report-section">
+          <div class="rs-title">🏢 Company-wise Salary Breakdown</div>
+          <table class="company-table">
+            <thead><tr><th>Company</th><th>Salary Range</th><th>Notes</th></tr></thead>
+            <tbody>${(d.companyWiseSalaries||[]).map(c=>`<tr><td>${c.company}</td><td style="color:var(--lavender);font-weight:500">${c.range}</td><td style="color:var(--gray);font-size:.8rem">${c.notes}</td></tr>`).join('')}</tbody>
+          </table>
+        </div>
+        <div class="report-section">
+          <div class="rs-title">🗣️ Your Negotiation Script</div>
+          <div class="script-block"><div class="script-label">Opening Statement</div><div class="script-text">${d.negotiationScript?.opening||''}</div></div>
+          <div class="script-block"><div class="script-label">When HR Asks Your Salary</div><div class="script-text">${d.negotiationScript?.whenAsked||''}</div></div>
+          <div class="script-block"><div class="script-label">Counter a Low Offer</div><div class="script-text">${d.negotiationScript?.counterOffer||''}</div></div>
+          <div class="script-block"><div class="script-label">Closing Statement</div><div class="script-text">${d.negotiationScript?.closing||''}</div></div>
+        </div>
+        <div class="report-section">
+          <div class="rs-title">📊 Offer Evaluation</div>
+          <div class="eval-text">${d.offerEvaluation||''}</div>
+        </div>
+        <div class="report-section">
+          <div class="rs-title">✅ Action Plan</div>
+          <ul class="action-list">${(d.actionPlan||[]).map(a=>`<li>${a}</li>`).join('')}</ul>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="report-section">
+            <div class="rs-title">⚠️ Red Flags</div>
+            <ul class="flag-list">${(d.redFlags||[]).map(f=>`<li>${f}</li>`).join('')}</ul>
+          </div>
+          <div class="report-section">
+            <div class="rs-title">📈 Skills to Add</div>
+            <ul class="skills-list">${(d.skillsToAdd||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
+          </div>
+        </div>`;
+
+      var downloadBar = document.createElement("div");
+      downloadBar.style.cssText = "display:flex;gap:12px;justify-content:center;padding:20px;flex-wrap:wrap;";
+      downloadBar.innerHTML = `
+        <button onclick="downloadPDF()" style="background:linear-gradient(135deg,#7c3aed,#9d5ff5);color:#fff;border:none;padding:12px 24px;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.95rem;">📄 Download as PDF</button>
+        <button onclick="downloadDOC()" style="background:linear-gradient(135deg,#1a56db,#3b82f6);color:#fff;border:none;padding:12px 24px;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.95rem;">📝 Download as DOC</button>`;
+      reportDiv.appendChild(downloadBar);
+      reportDiv.scrollIntoView({behavior:'smooth'});
+    } else {
+      reportDiv.innerHTML = `<p style='color:red;text-align:center;padding:20px'>Report failed: ${json.error}</p>`;
+    }
+  } catch(err) {
+    reportDiv.innerHTML = `<p style='color:red;text-align:center;padding:20px'>Error: ${err.message}</p>`;
+  }
+}
+
+function downloadPDF() {
   var profile = window._userProfile;
-
-  // Create printable version
   var printWindow = window.open('', '_blank');
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>NegotiateAI Full Report</title>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 40px; color: #1a1a2e; max-width: 800px; margin: 0 auto; }
-        h1 { color: #7c3aed; font-size: 24px; margin-bottom: 5px; }
-        h2 { color: #7c3aed; font-size: 16px; margin-top: 24px; margin-bottom: 10px; border-bottom: 2px solid #7c3aed; padding-bottom: 5px; }
-        .meta { color: #666; font-size: 13px; margin-bottom: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-        th { background: #7c3aed; color: white; padding: 8px 12px; text-align: left; font-size: 13px; }
-        td { padding: 8px 12px; border-bottom: 1px solid #e0e0f0; font-size: 13px; }
-        tr:nth-child(even) { background: #f8f8ff; }
-        .script-block { background: #f8f8ff; border-left: 4px solid #7c3aed; padding: 12px 16px; margin-bottom: 10px; border-radius: 0 8px 8px 0; }
-        .script-label { font-size: 11px; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: bold; }
-        .script-text { font-size: 13px; font-style: italic; color: #333; line-height: 1.6; }
-        .list-item { padding: 6px 0; border-bottom: 1px solid #e0e0f0; font-size: 13px; display: flex; gap: 8px; }
-        .eval { background: #f0f0ff; padding: 14px; border-radius: 8px; font-size: 13px; line-height: 1.6; }
-        .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e0e0f0; font-size: 11px; color: #999; text-align: center; }
-        @media print { body { padding: 20px; } }
-      </style>
-    </head>
-    <body>
-      <h1>NegotiateAI — Full Salary Report</h1>
-      <div class="meta">
-        Generated for: <strong>${profile?.jobTitle || ''}</strong> | 
-        Skills: <strong>${profile?.skills || ''}</strong> | 
-        Experience: <strong>${profile?.experience || ''}</strong> | 
-        Location: <strong>${profile?.location || ''}</strong><br>
-        Generated on: ${new Date().toLocaleDateString('en-IN', {day:'numeric',month:'long',year:'numeric'})}
-      </div>
-
-      <h2>🏢 Company-wise Salary Breakdown</h2>
-      ${document.querySelector('.company-table') ? document.querySelector('.company-table').outerHTML : ''}
-
-      <h2>🗣️ Negotiation Script</h2>
-      ${Array.from(document.querySelectorAll('.script-block')).map(b => b.outerHTML).join('')}
-
-      <h2>📊 Offer Evaluation</h2>
-      <div class="eval">${document.querySelector('.eval-text')?.innerText || ''}</div>
-
-      <h2>✅ Action Plan</h2>
-      ${Array.from(document.querySelectorAll('.action-list li')).map(li=>`<div class="list-item">→ ${li.innerText}</div>`).join('')}
-
-      <h2>⚠️ Red Flags to Watch</h2>
-      ${Array.from(document.querySelectorAll('.flag-list li')).map(li=>`<div class="list-item">⚠ ${li.innerText}</div>`).join('')}
-
-      <h2>📈 Skills to Add</h2>
-      ${Array.from(document.querySelectorAll('.skills-list li')).map(li=>`<div class="list-item">↑ ${li.innerText}</div>`).join('')}
-
-      <div class="footer">Generated by NegotiateAI — negotiateai-vercel.vercel.app | © 2025 Manikanta · Converso</div>
-    </body>
-    </html>
-  `);
+  printWindow.document.write(`<!DOCTYPE html><html><head><title>NegotiateAI Report</title>
+  <style>body{font-family:Arial,sans-serif;padding:40px;color:#1a1a2e;max-width:800px;margin:0 auto}h1{color:#7c3aed}h2{color:#7c3aed;border-bottom:2px solid #7c3aed;padding-bottom:5px}table{width:100%;border-collapse:collapse}th{background:#7c3aed;color:white;padding:8px;text-align:left}td{padding:8px;border:1px solid #ddd}.script-block{background:#f8f8ff;border-left:4px solid #7c3aed;padding:10px;margin-bottom:8px}</style>
+  </head><body>
+  <h1>NegotiateAI — Full Salary Report</h1>
+  <p>Role: <strong>${profile?.jobTitle||''}</strong> | Skills: <strong>${profile?.skills||''}</strong> | Experience: <strong>${profile?.experience||''}</strong> | Location: <strong>${profile?.location||''}</strong></p>
+  <h2>Company-wise Salary Breakdown</h2>${document.querySelector('.company-table')?document.querySelector('.company-table').outerHTML:''}
+  <h2>Negotiation Script</h2>${Array.from(document.querySelectorAll('.script-block')).map(b=>b.outerHTML).join('')}
+  <h2>Offer Evaluation</h2><p>${document.querySelector('.eval-text')?.innerText||''}</p>
+  <h2>Action Plan</h2><ul>${Array.from(document.querySelectorAll('.action-list li')).map(li=>`<li>${li.innerText}</li>`).join('')}</ul>
+  <h2>Red Flags</h2><ul>${Array.from(document.querySelectorAll('.flag-list li')).map(li=>`<li>${li.innerText}</li>`).join('')}</ul>
+  <h2>Skills to Add</h2><ul>${Array.from(document.querySelectorAll('.skills-list li')).map(li=>`<li>${li.innerText}</li>`).join('')}</ul>
+  </body></html>`);
   printWindow.document.close();
   printWindow.focus();
-  setTimeout(function() {
-    printWindow.print();
-    btn.textContent = "📄 Download as PDF";
-    btn.disabled = false;
-  }, 500);
+  setTimeout(function(){printWindow.print();},500);
 }
 
 function downloadDOC() {
-  var btn = event.target;
-  btn.textContent = "Generating DOC...";
-  btn.disabled = true;
-
   var profile = window._userProfile;
-
-  var content = `
-    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-    <head><meta charset='utf-8'><title>NegotiateAI Report</title>
-    <style>
-      body { font-family: Arial, sans-serif; padding: 40px; color: #1a1a2e; }
-      h1 { color: #7c3aed; font-size: 24px; }
-      h2 { color: #7c3aed; font-size: 16px; margin-top: 24px; border-bottom: 2px solid #7c3aed; padding-bottom: 5px; }
-      .meta { color: #666; font-size: 13px; margin-bottom: 20px; }
-      table { width: 100%; border-collapse: collapse; }
-      th { background: #7c3aed; color: white; padding: 8px; text-align: left; }
-      td { padding: 8px; border: 1px solid #ddd; }
-      .script-block { background: #f8f8ff; border-left: 4px solid #7c3aed; padding: 10px; margin-bottom: 8px; }
-      .eval { background: #f0f0ff; padding: 12px; border-radius: 6px; }
-      .footer { margin-top: 40px; font-size: 11px; color: #999; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; }
-    </style>
-    </head><body>
-    <h1>NegotiateAI — Full Salary Report</h1>
-    <div class="meta">
-      Role: <strong>${profile?.jobTitle||''}</strong> | 
-      Skills: <strong>${profile?.skills||''}</strong> | 
-      Experience: <strong>${profile?.experience||''}</strong> | 
-      Location: <strong>${profile?.location||''}</strong><br>
-      Generated: ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}
-    </div>
-
-    <h2>🏢 Company-wise Salary Breakdown</h2>
-    ${document.querySelector('.company-table') ? document.querySelector('.company-table').outerHTML : ''}
-
-    <h2>🗣️ Negotiation Script</h2>
-    ${Array.from(document.querySelectorAll('.script-block')).map(b=>`<div class="script-block">${b.innerHTML}</div>`).join('')}
-
-    <h2>📊 Offer Evaluation</h2>
-    <div class="eval">${document.querySelector('.eval-text')?.innerText||''}</div>
-
-    <h2>✅ Action Plan</h2>
-    <ul>${Array.from(document.querySelectorAll('.action-list li')).map(li=>`<li>${li.innerText}</li>`).join('')}</ul>
-
-    <h2>⚠️ Red Flags</h2>
-    <ul>${Array.from(document.querySelectorAll('.flag-list li')).map(li=>`<li>${li.innerText}</li>`).join('')}</ul>
-
-    <h2>📈 Skills to Add</h2>
-    <ul>${Array.from(document.querySelectorAll('.skills-list li')).map(li=>`<li>${li.innerText}</li>`).join('')}</ul>
-
-    <div class="footer">Generated by NegotiateAI — negotiateai-vercel.vercel.app | © 2025 Manikanta · Converso</div>
-    </body></html>
-  `;
-
-  var blob = new Blob([content], { type: 'application/msword' });
+  var content = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><title>NegotiateAI Report</title><style>body{font-family:Arial;padding:40px}h1,h2{color:#7c3aed}table{width:100%;border-collapse:collapse}th{background:#7c3aed;color:white;padding:8px}td{padding:8px;border:1px solid #ddd}</style></head><body>
+  <h1>NegotiateAI — Full Salary Report</h1>
+  <p>Role: <strong>${profile?.jobTitle||''}</strong> | Experience: <strong>${profile?.experience||''}</strong> | Location: <strong>${profile?.location||''}</strong></p>
+  <h2>Company-wise Salary Breakdown</h2>${document.querySelector('.company-table')?document.querySelector('.company-table').outerHTML:''}
+  <h2>Negotiation Script</h2>${Array.from(document.querySelectorAll('.script-block')).map(b=>b.outerHTML).join('')}
+  <h2>Offer Evaluation</h2><p>${document.querySelector('.eval-text')?.innerText||''}</p>
+  <h2>Action Plan</h2><ul>${Array.from(document.querySelectorAll('.action-list li')).map(li=>`<li>${li.innerText}</li>`).join('')}</ul>
+  <h2>Red Flags</h2><ul>${Array.from(document.querySelectorAll('.flag-list li')).map(li=>`<li>${li.innerText}</li>`).join('')}</ul>
+  <h2>Skills to Add</h2><ul>${Array.from(document.querySelectorAll('.skills-list li')).map(li=>`<li>${li.innerText}</li>`).join('')}</ul>
+  </body></html>`;
+  var blob = new Blob([content],{type:'application/msword'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = 'NegotiateAI_Report_' + (profile?.jobTitle||'Report').replace(/\s+/g,'_') + '.doc';
+  a.download = 'NegotiateAI_Report.doc';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-
-  btn.textContent = "📝 Download as DOC";
-  btn.disabled = false;
 }
 </script>
 </body>
