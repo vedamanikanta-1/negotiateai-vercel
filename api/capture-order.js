@@ -6,43 +6,30 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
 
-  const clientId = process.env.PAYPAL_CLIENT_ID;
-  const secret = process.env.PAYPAL_SECRET;
-  const { orderID } = req.body;
+  const apiKey = process.env.INSTAMOJO_API_KEY;
+  const authToken = process.env.INSTAMOJO_AUTH_TOKEN;
+  const { paymentRequestId, paymentId } = req.body;
 
   try {
-    const authString = Buffer.from(clientId + ":" + secret).toString("base64");
-
-    const authRes = await fetch("https://api-m.paypal.com/v1/oauth2/token", {
-      method: "POST",
-      headers: {
-        "Authorization": "Basic " + authString,
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: "grant_type=client_credentials"
-    });
-
-    const authData = await authRes.json();
-
-    const captureRes = await fetch(
-      "https://api-m.paypal.com/v2/checkout/orders/" + orderID + "/capture",
+    const response = await fetch(
+      `https://test.instamojo.com/api/1.1/payment-requests/${paymentRequestId}/${paymentId}/`,
       {
-        method: "POST",
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + authData.access_token
-        },
-        body: "{}"
+          "X-Api-Key": apiKey,
+          "X-Auth-Token": authToken
+        }
       }
     );
 
-    const captureData = await captureRes.json();
+    const data = await response.json();
 
-    if (captureData.status === "COMPLETED") {
+    if (data.success && data.payment_request.payment.status === "Credit") {
       return res.status(200).json({ success: true });
     } else {
-      return res.status(400).json({ error: "Not completed", details: captureData });
+      return res.status(400).json({ error: "Payment not verified", details: data });
     }
+
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
