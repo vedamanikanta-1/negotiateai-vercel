@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
     params.append("send_sms", "false");
     params.append("allow_repeated_payments", "true");
 
-    const response = await fetch("https://test.instamojo.com/api/1.1/payment-requests/", {
+    const response = await fetch("https://www.instamojo.com/api/1.1/payment-requests/", {
       method: "POST",
       headers: {
         "X-Api-Key": apiKey,
