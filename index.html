@@ -731,132 +731,7 @@ function showFullReport(d){
   }
 }
 function unlockReport() {
-  console.log("SECOND unlockReport");
-  var clientId = "AftEJyCTuo6zVwgKz71xeWAy7RkYC-HY7ZUGVgHXKX3qa8EVhs38zBfK-R7JBrAcA72A5pAil6jfTELg";
-  var btn = document.getElementById("unlockBtn");
-  var container = document.getElementById("paypal-container");
-  btn.disabled = true;
-  btn.textContent = "Loading PayPal...";
-  container.innerHTML = "";
-  container.style.display = "block";
-  btn.style.display = "none";
-  var script = document.createElement("script");
-s.src = "https://www.paypal.com/sdk/js?client-id=AcqdtIb5EA1J_yc0iu5XDd3-5iHOnkSoBGgiDVRUI-vEQNDZ8xU8UkbqcmRHgT2oSvAwiIyTdpED9Cy0&currency=USD&vault=false&intent=capture";
-  script.onload = function() {
-    paypal.Buttons({
-      createOrder: function() {
-        return fetch("/api/create-order", { method: "POST", headers: {"Content-Type": "application/json"}, body: "{}" })
-        .then(function(r) { return r.json(); })
-        .then(function(d) { if (!d.orderID) throw new Error(JSON.stringify(d)); return d.orderID; });
-      },
-      onApprove: function(data) {
-        container.innerHTML = "<p style='color:#a78bfa;text-align:center;padding:20px'>Processing...</p>";
-        return fetch("/api/capture-order", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({orderID: data.orderID}) })
-        .then(function(r) { return r.json(); })
-        .then(function(result) {
-          if (result.success) { container.style.display = "none"; generateFullReport(); }
-          else { alert("Capture failed: " + JSON.stringify(result)); resetBtn(); }
-        });
-      },
-      onCancel: function() { resetBtn(); },
-      onError: function(err) {
-  console.error("FULL PAYPAL ERROR:", err);
-  console.log("FULL PAYPAL ERROR JSON:", JSON.stringify(err, null, 2));
-
-  alert(
-    "PayPal Error: " +
-    (err && err.message ? err.message : JSON.stringify(err))
-  );
-
-  resetBtn();
-}
-    }).render("#paypal-container");
-  };
-  script.onerror = function() { alert("PayPal SDK failed. Check Client ID!"); resetBtn(); };
-  document.body.appendChild(script);
-  function resetBtn() {
-    btn.disabled = false;
-    btn.textContent = "Unlock Full Report - Rs.199";
-    btn.style.display = "block";
-    container.style.display = "none";
-  }
-}
-async function generateFullReport() {
-  var p = window._userProfile;
-  if(!p) { alert("Profile data lost. Please fill the form again."); return; }
-
-  var existing = document.getElementById("fullReport");
-  if(existing) existing.remove();
-
-  var reportDiv = document.createElement("div");
-  reportDiv.id = "fullReport";
-  reportDiv.className = "report show";
-  reportDiv.innerHTML = "<div style='text-align:center;padding:30px;color:#a78bfa'><div class='spinner' style='margin:0 auto 14px'></div><p>Generating your full report...</p></div>";
-
-  var paypalContainer = document.getElementById("paypal-container");
-  paypalContainer.parentNode.insertBefore(reportDiv, paypalContainer.nextSibling);
-
-  try {
-    var res = await fetch("/api/full-report", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(p) });
-    var json = await res.json();
-    console.log("Full report response:", json);
-    if(json.success) {
-      var d = json.data;
-      reportDiv.innerHTML = `
-        <div class="report-section">
-          <div class="rs-title">🏢 Company-wise Salary Breakdown</div>
-          <table class="company-table">
-            <thead><tr><th>Company</th><th>Salary Range</th><th>Notes</th></tr></thead>
-            <tbody>${(d.companyWiseSalaries||[]).map(c=>`<tr><td>${c.company}</td><td style="color:var(--lavender);font-weight:500">${c.range}</td><td style="color:var(--gray);font-size:.8rem">${c.notes}</td></tr>`).join('')}</tbody>
-          </table>
-        </div>
-        <div class="report-section">
-          <div class="rs-title">🗣️ Your Negotiation Script</div>
-          <div class="script-block"><div class="script-label">Opening Statement</div><div class="script-text">${d.negotiationScript?.opening||''}</div></div>
-          <div class="script-block"><div class="script-label">When HR Asks Your Salary</div><div class="script-text">${d.negotiationScript?.whenAsked||''}</div></div>
-          <div class="script-block"><div class="script-label">Counter a Low Offer</div><div class="script-text">${d.negotiationScript?.counterOffer||''}</div></div>
-          <div class="script-block"><div class="script-label">Closing Statement</div><div class="script-text">${d.negotiationScript?.closing||''}</div></div>
-        </div>
-        <div class="report-section">
-          <div class="rs-title">📊 Offer Evaluation</div>
-          <div class="eval-text">${d.offerEvaluation||''}</div>
-        </div>
-        <div class="report-section">
-          <div class="rs-title">✅ Action Plan</div>
-          <ul class="action-list">${(d.actionPlan||[]).map(a=>`<li>${a}</li>`).join('')}</ul>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-          <div class="report-section">
-            <div class="rs-title">⚠️ Red Flags</div>
-            <ul class="flag-list">${(d.redFlags||[]).map(f=>`<li>${f}</li>`).join('')}</ul>
-          </div>
-          <div class="report-section">
-            <div class="rs-title">📈 Skills to Add</div>
-            <ul class="skills-list">${(d.skillsToAdd||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
-          </div>
-        </div>`;
-      reportDiv.scrollIntoView({behavior:'smooth'});
-      // Add download buttons
-var downloadBar = document.createElement("div");
-downloadBar.style.cssText = "display:flex;gap:12px;justify-content:center;padding:20px;flex-wrap:wrap;";
-downloadBar.innerHTML = `
-  <button onclick="downloadPDF()" style="background:linear-gradient(135deg,#7c3aed,#9d5ff5);color:#fff;border:none;padding:12px 24px;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:500;display:flex;align-items:center;gap:8px;">
-    📄 Download as PDF
-  </button>
-  <button onclick="downloadDOC()" style="background:linear-gradient(135deg,#1a56db,#3b82f6);color:#fff;border:none;padding:12px 24px;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:500;display:flex;align-items:center;gap:8px;">
-    📝 Download as DOC
-  </button>`;
-reportDiv.appendChild(downloadBar);
-    } else {
-      reportDiv.innerHTML = `<p style='color:red;text-align:center;padding:20px'>Report failed: ${json.error}</p>`;
-    }
-  } catch(err) {
-    reportDiv.innerHTML = `<p style='color:red;text-align:center;padding:20px'>Error: ${err.message}</p>`;
-  }
-}
-</script>
-  <script>
-document.getElementById("unlockBtn").addEventListener("click", function() {
+ document.getElementById("unlockBtn").addEventListener("click", function() {
   var btn = document.getElementById("unlockBtn");
   var container = document.getElementById("paypal-container");
 
@@ -880,10 +755,10 @@ document.getElementById("unlockBtn").addEventListener("click", function() {
 
     container.innerHTML =
       "<div style='background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;text-align:center;max-width:380px;margin:0 auto;'>" +
-      "<p style='color:var(--lavender);font-size:1rem;margin-bottom:16px;'>💳 Complete Your Payment (TEST MODE)</p>" +
+      "<p style='color:var(--lavender);font-size:1rem;margin-bottom:16px;'>💳 Complete Your Payment</p>" +
       "<a href='" + data.paymentUrl + "' target='_blank' style='display:inline-block;background:linear-gradient(135deg,#7c3aed,#9d5ff5);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-family:DM Sans,sans-serif;font-size:1rem;font-weight:500;margin-bottom:16px;'>" +
       "Pay ₹199 via Instamojo →</a>" +
-      "<p style='color:var(--gray);font-size:.85rem;margin-bottom:14px;'>Test card: 4111 1111 1111 1111</p>" +
+      "<p style='color:var(--gray);font-size:.85rem;margin-bottom:14px;'>UPI QR, Cards, NetBanking accepted</p>" +
       "<button onclick='verifyInstamojoPayment()' style='width:100%;background:transparent;border:1px solid var(--border);color:var(--white);padding:12px;border-radius:10px;cursor:pointer;font-family:DM Sans,sans-serif;font-size:.9rem;'>" +
       "✅ I've Completed Payment</button>" +
       "</div>";
@@ -899,7 +774,7 @@ function verifyInstamojoPayment() {
   var btn = document.getElementById("unlockBtn");
 
   var urlParams = new URLSearchParams(window.location.search);
-  var paymentId = urlParams.get("payment_id") || prompt("Enter Payment ID from confirmation page:");
+  var paymentId = urlParams.get("payment_id") || prompt("Enter Payment ID from your confirmation (check email/SMS):");
 
   if (!paymentId) {
     alert("Payment ID required to verify.");
@@ -923,7 +798,7 @@ function verifyInstamojoPayment() {
       container.style.display = "none";
       generateFullReport();
     } else {
-      alert("Payment verification failed. Check Payment ID and try again.");
+      alert("Payment verification failed. Please check your Payment ID and try again.");
       resetBtn(btn, container);
     }
   })
@@ -963,6 +838,7 @@ async function generateFullReport() {
       body: JSON.stringify(p)
     });
     var json = await res.json();
+    console.log("Full report response:", json);
     if(json.success) {
       var d = json.data;
       reportDiv.innerHTML = `
@@ -1002,8 +878,8 @@ async function generateFullReport() {
       var downloadBar = document.createElement("div");
       downloadBar.style.cssText = "display:flex;gap:12px;justify-content:center;padding:20px;flex-wrap:wrap;";
       downloadBar.innerHTML = `
-        <button onclick="downloadPDF()" style="background:linear-gradient(135deg,#7c3aed,#9d5ff5);color:#fff;border:none;padding:12px 24px;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.95rem;">📄 Download as PDF</button>
-        <button onclick="downloadDOC()" style="background:linear-gradient(135deg,#1a56db,#3b82f6);color:#fff;border:none;padding:12px 24px;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.95rem;">📝 Download as DOC</button>`;
+        <button onclick="downloadPDF()" style="background:linear-gradient(135deg,#7c3aed,#9d5ff5);color:#fff;border:none;padding:12px 24px;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:500;">📄 Download as PDF</button>
+        <button onclick="downloadDOC()" style="background:linear-gradient(135deg,#1a56db,#3b82f6);color:#fff;border:none;padding:12px 24px;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:500;">📝 Download as DOC</button>`;
       reportDiv.appendChild(downloadBar);
       reportDiv.scrollIntoView({behavior:'smooth'});
     } else {
