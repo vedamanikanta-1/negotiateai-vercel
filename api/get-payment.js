@@ -16,7 +16,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Verify admin
     if (adminSecret !== process.env.ADMIN_SECRET) {
       return res.status(401).json({
         success: false,
@@ -24,7 +23,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get payment from Vercel KV / Redis
     const response = await fetch(
       `${process.env.KV_REST_API_URL}/get/payment:${encodeURIComponent(paymentId)}`,
       {
@@ -36,10 +34,18 @@ export default async function handler(req, res) {
     );
 
     if (!response.ok) {
-      throw new Error("Failed to access payment database");
+      const errorText = await response.text();
+      console.error("Redis error:", errorText);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to access payment database"
+      });
     }
 
     const data = await response.json();
+
+    console.log("Raw Redis response:", JSON.stringify(data));
 
     if (!data.result) {
       return res.status(404).json({
@@ -48,7 +54,23 @@ export default async function handler(req, res) {
       });
     }
 
-    const payment = JSON.parse(data.result);
+    let payment;
+
+    try {
+      payment =
+        typeof data.result === "string"
+          ? JSON.parse(data.result)
+          : data.result;
+    } catch (parseError) {
+      console.error("Payment JSON parse error:", parseError);
+
+      return res.status(500).json({
+        success: false,
+        message: "Invalid payment data stored in database"
+      });
+    }
+
+    console.log("Payment object:", JSON.stringify(payment));
 
     return res.status(200).json({
       success: true,
@@ -60,7 +82,8 @@ export default async function handler(req, res) {
 
     return res.status(500).json({
       success: false,
-      message: "Unable to retrieve payment"
+      message: "Unable to retrieve payment",
+      error: error.message
     });
   }
 }
