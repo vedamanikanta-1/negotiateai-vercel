@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>NegotiateAI Admin</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      margin: 0;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    h1 {
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+    }
+
+    input {
+      padding: 12px;
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 11px 18px;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .verify {
+      background: #111;
+      color: white;
+    }
+
+    .reject {
+      background: #eee;
+      color: #111;
+    }
+
+    .payment {
+      border: 1px solid #eee;
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 15px;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 20px;
+      background: #fff3cd;
+      color: #856404;
+      font-size: 13px;
+    }
+
+    .success {
+      color: green;
+    }
+
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>NegotiateAI Admin</h1>
+  <div class="subtitle">
+    Payment verification dashboard
+  </div>
+
+  <div class="card">
+
+    <h3>Admin Authentication</h3>
+
+    <input
+      type="password"
+      id="adminSecret"
+      placeholder="Enter admin secret"
+    >
+
+    <button onclick="loadPayment()">
+      Load Payment
+    </button>
+
+  </div>
+
+  <div class="card">
+
+    <h3>Find Payment</h3>
+
+    <input
+      type="text"
+      id="paymentId"
+      placeholder="NEG-XXXXXXXX"
+    >
+
+    <button onclick="loadPayment()">
+      Search
+    </button>
+
+  </div>
+
+  <div id="paymentContainer"></div>
+
+</div>
+
+<script>
+
+async function loadPayment() {
+
+  const paymentId =
+    document.getElementById("paymentId").value.trim();
+
+  const adminSecret =
+    document.getElementById("adminSecret").value.trim();
+
+  if (!paymentId || !adminSecret) {
+    alert("Enter payment ID and admin secret.");
+    return;
+  }
+
+  try {
+
+    /*
+      IMPORTANT:
+
+      This example expects an API endpoint
+      that reads a payment from KV.
+
+      Create /api/get-payment.js
+      if you want direct searching from the dashboard.
+    */
+
+    const response = await fetch(
+      `/api/get-payment?paymentId=${encodeURIComponent(paymentId)}&adminSecret=${encodeURIComponent(adminSecret)}`
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Payment not found");
+    }
+
+    displayPayment(data.payment);
+
+  } catch (error) {
+
+    document.getElementById("paymentContainer").innerHTML =
+      `<p class="error">${error.message}</p>`;
+
+  }
+}
+
+
+function displayPayment(payment) {
+
+  const container =
+    document.getElementById("paymentContainer");
+
+  container.innerHTML = `
+
+    <div class="card payment">
+
+      <h2>Payment Details</h2>
+
+      <p>
+        <strong>Payment ID:</strong>
+        ${payment.paymentId}
+      </p>
+
+      <p>
+        <strong>Amount:</strong>
+        ₹${payment.amount}
+      </p>
+
+      <p>
+        <strong>Email:</strong>
+        ${payment.email}
+      </p>
+
+      <p>
+        <strong>WhatsApp:</strong>
+        ${payment.whatsapp || "Not provided"}
+      </p>
+
+      <p>
+        <strong>UTR:</strong>
+        ${payment.utr || "Not submitted"}
+      </p>
+
+      <p>
+        <strong>Status:</strong>
+        <span class="status">
+          ${payment.status}
+        </span>
+      </p>
+
+      ${
+        payment.status === "PAYMENT_SUBMITTED"
+        ? `
+          <button
+            class="verify"
+            onclick="verifyPayment('${payment.paymentId}')">
+            ✓ Verify Payment
+          </button>
+
+          <button
+            class="reject"
+            onclick="rejectPayment('${payment.paymentId}')">
+            Reject
+          </button>
+        `
+        : ""
+      }
+
+    </div>
+
+  `;
+}
+
+
+async function verifyPayment(paymentId) {
+
+  const adminSecret =
+    document.getElementById("adminSecret").value.trim();
+
+  if (!confirm(
+    "Have you confirmed this UTR in your UPI/bank transaction history?"
+  )) {
+    return;
+  }
+
+  try {
+
+    const response = await fetch(
+      "/api/send-report",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          paymentId,
+          adminSecret
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message);
+    }
+
+    alert(
+      "Payment verified. Customer has been notified."
+    );
+
+    loadPayment();
+
+  } catch (error) {
+
+    alert(error.message);
+
+  }
+}
+
+
+async function rejectPayment(paymentId) {
+
+  const adminSecret =
+    document.getElementById("adminSecret").value.trim();
+
+  if (!confirm("Reject this payment submission?")) {
+    return;
+  }
+
+  try {
+
+    const response = await fetch(
+      "/api/reject-payment",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          paymentId,
+          adminSecret
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message);
+    }
+
+    alert("Payment rejected.");
+
+    loadPayment();
+
+  } catch (error) {
+
+    alert(error.message);
+
+  }
+}
+
+</script>
+
+</body>
+</html>
