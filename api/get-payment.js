@@ -35,7 +35,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Redis error:", errorText);
+      console.error("Redis GET error:", errorText);
 
       return res.status(500).json({
         success: false,
@@ -45,9 +45,9 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    console.log("Raw Redis response:", JSON.stringify(data));
+    console.log("RAW REDIS RESULT:", JSON.stringify(data));
 
-    if (!data.result) {
+    if (data.result === null || data.result === undefined) {
       return res.status(404).json({
         success: false,
         message: "Payment not found"
@@ -56,25 +56,52 @@ export default async function handler(req, res) {
 
     let payment;
 
-    try {
-      payment =
-        typeof data.result === "string"
-          ? JSON.parse(data.result)
-          : data.result;
-    } catch (parseError) {
-      console.error("Payment JSON parse error:", parseError);
+    // Normal Upstash REST response:
+    // { result: "{\"paymentId\":\"...\",...}" }
+    if (typeof data.result === "string") {
+      try {
+        payment = JSON.parse(data.result);
+      } catch (error) {
+        console.error("JSON parse failed:", data.result);
 
-      return res.status(500).json({
-        success: false,
-        message: "Invalid payment data stored in database"
-      });
+        return res.status(500).json({
+          success: false,
+          message: "Stored payment data is invalid"
+        });
+      }
+    } else {
+      payment = data.result;
     }
 
-    console.log("Payment object:", JSON.stringify(payment));
+    // Handle accidental wrapper structures from older records.
+    if (payment && payment.payment && typeof payment.payment === "object") {
+      payment = payment.payment;
+    }
+
+    console.log(
+      "NORMALIZED PAYMENT:",
+      JSON.stringify({
+        paymentId: payment?.paymentId,
+        amount: payment?.amount,
+        email: payment?.email,
+        whatsapp: payment?.whatsapp,
+        utr: payment?.utr,
+        status: payment?.status
+      })
+    );
 
     return res.status(200).json({
       success: true,
-      payment
+      payment: {
+        paymentId: payment?.paymentId || paymentId,
+        amount: payment?.amount ?? 199,
+        email: payment?.email || "",
+        whatsapp: payment?.whatsapp || "",
+        utr: payment?.utr || "",
+        status: payment?.status || "UNKNOWN",
+        createdAt: payment?.createdAt || "",
+        profile: payment?.profile || {}
+      }
     });
 
   } catch (error) {
