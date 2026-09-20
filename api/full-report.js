@@ -1,39 +1,67 @@
 const { GoogleGenAI } = require("@google/genai");
 
-module.exports = async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
+async function generateFullReport(profile) {
+  const {
+    jobTitle,
+    skills,
+    experience,
+    location,
+    currentSalary
+  } = profile || {};
 
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "Gemini API key not found" });
 
-  const { jobTitle, skills, experience, location, currentSalary } = req.body;
+  if (!apiKey) {
+    throw new Error("Gemini API key not found");
+  }
 
-  try {
-    const ai = new GoogleGenAI({ apiKey: apiKey });
+  const ai = new GoogleGenAI({
+    apiKey
+  });
 
-    const prompt = `You are India top salary negotiation coach.
+  const prompt = `You are India's top salary negotiation coach.
 
 Profile:
-- Job Title: ${jobTitle}
-- Skills: ${skills}
-- Experience: ${experience}
-- Location: ${location}
+- Job Title: ${jobTitle || "Not provided"}
+- Skills: ${skills || "Not provided"}
+- Experience: ${experience || "Not provided"}
+- Location: ${location || "Not provided"}
 - Current Salary: ${currentSalary || "Not disclosed"}
 
-Return ONLY valid JSON no markdown:
+Return ONLY valid JSON. Do not use markdown.
+
 {
   "companyWiseSalaries": [
-    {"company": "Google", "range": "XX-XXL", "notes": "brief note"},
-    {"company": "Amazon", "range": "XX-XXL", "notes": "brief note"},
-    {"company": "Microsoft", "range": "XX-XXL", "notes": "brief note"},
-    {"company": "TCS", "range": "XX-XXL", "notes": "brief note"},
-    {"company": "Infosys", "range": "XX-XXL", "notes": "brief note"},
-    {"company": "Wipro", "range": "XX-XXL", "notes": "brief note"}
+    {
+      "company": "Google",
+      "range": "XX-XX LPA",
+      "notes": "brief note"
+    },
+    {
+      "company": "Amazon",
+      "range": "XX-XX LPA",
+      "notes": "brief note"
+    },
+    {
+      "company": "Microsoft",
+      "range": "XX-XX LPA",
+      "notes": "brief note"
+    },
+    {
+      "company": "TCS",
+      "range": "XX-XX LPA",
+      "notes": "brief note"
+    },
+    {
+      "company": "Infosys",
+      "range": "XX-XX LPA",
+      "notes": "brief note"
+    },
+    {
+      "company": "Wipro",
+      "range": "XX-XX LPA",
+      "notes": "brief note"
+    }
   ],
   "negotiationScript": {
     "opening": "exact opening statement",
@@ -41,22 +69,86 @@ Return ONLY valid JSON no markdown:
     "counterOffer": "exact counter offer script",
     "closing": "exact closing statement"
   },
-  "offerEvaluation": "is current salary fair underpaid or overpaid",
-  "actionPlan": ["step1","step2","step3"],
-  "redFlags": ["flag1","flag2"],
-  "skillsToAdd": ["skill with percent salary increase"]
+  "offerEvaluation": "Explain whether the salary appears fair, underpaid or overpaid and why.",
+  "actionPlan": [
+    "step1",
+    "step2",
+    "step3"
+  ],
+  "redFlags": [
+    "flag1",
+    "flag2"
+  ],
+  "skillsToAdd": [
+    "skill with expected salary impact"
+  ]
 }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite",
-      contents: prompt
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash-lite",
+    contents: prompt
+  });
+
+  const text = response.text || "";
+
+  const cleaned = text
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  return JSON.parse(cleaned);
+}
+
+
+// Existing API endpoint
+module.exports = async function handler(req, res) {
+
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type"
+  );
+
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "POST, OPTIONS"
+  );
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      error: "Method Not Allowed"
+    });
+  }
+
+  try {
+
+    const data = await generateFullReport(
+      req.body || {}
+    );
+
+    return res.status(200).json({
+      success: true,
+      data
     });
 
-    const text = response.text;
-    const cleaned = text.replace(/```json|```/g, "").trim();
-    const data = JSON.parse(cleaned);
-    return res.status(200).json({ success: true, data: data });
   } catch (err) {
-    return res.status(500).json({ error: "Report failed: " + err.message });
+
+    console.error("Full report error:", err);
+
+    return res.status(500).json({
+      error: "Report failed: " + err.message
+    });
   }
 };
+
+
+// Export generator for other API functions
+module.exports.generateFullReport = generateFullReport;
