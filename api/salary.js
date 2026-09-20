@@ -48,7 +48,6 @@ Return ONLY valid JSON no markdown:
 }`;
 
     const response = await ai.models.generateContent({
-      // Gemini 3.5 Flash Lite
       model: "gemini-3.5-flash-lite",
       contents: prompt
     });
