@@ -34,18 +34,12 @@ export default async function handler(req, res) {
     );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Redis GET error:", errorText);
-
-      return res.status(500).json({
-        success: false,
-        message: "Failed to access payment database"
-      });
+      throw new Error("Failed to access payment database");
     }
 
     const data = await response.json();
 
-    console.log("RAW REDIS RESULT:", JSON.stringify(data));
+    console.log("RAW REDIS RESULT:", data);
 
     if (data.result === null || data.result === undefined) {
       return res.status(404).json({
@@ -54,53 +48,31 @@ export default async function handler(req, res) {
       });
     }
 
-    let payment;
+    let payment = data.result;
 
-    // Normal Upstash REST response:
-    // { result: "{\"paymentId\":\"...\",...}" }
-    if (typeof data.result === "string") {
-      try {
-        payment = JSON.parse(data.result);
-      } catch (error) {
-        console.error("JSON parse failed:", data.result);
-
-        return res.status(500).json({
-          success: false,
-          message: "Stored payment data is invalid"
-        });
-      }
-    } else {
-      payment = data.result;
+    // Redis may return a JSON string
+    if (typeof payment === "string") {
+      payment = JSON.parse(payment);
     }
 
-    // Handle accidental wrapper structures from older records.
-    if (payment && payment.payment && typeof payment.payment === "object") {
+    // Handle accidental nested payment object
+    if (payment && payment.payment) {
       payment = payment.payment;
     }
 
-    console.log(
-      "NORMALIZED PAYMENT:",
-      JSON.stringify({
-        paymentId: payment?.paymentId,
-        amount: payment?.amount,
-        email: payment?.email,
-        whatsapp: payment?.whatsapp,
-        utr: payment?.utr,
-        status: payment?.status
-      })
-    );
+    console.log("NORMALIZED PAYMENT:", payment);
 
     return res.status(200).json({
       success: true,
       payment: {
-        paymentId: payment?.paymentId || paymentId,
-        amount: payment?.amount ?? 199,
-        email: payment?.email || "",
-        whatsapp: payment?.whatsapp || "",
-        utr: payment?.utr || "",
-        status: payment?.status || "UNKNOWN",
-        createdAt: payment?.createdAt || "",
-        profile: payment?.profile || {}
+        paymentId: payment.paymentId || paymentId,
+        amount: payment.amount || 199,
+        email: payment.email || "",
+        whatsapp: payment.whatsapp || "",
+        utr: payment.utr || "",
+        status: payment.status || "UNKNOWN",
+        createdAt: payment.createdAt || "",
+        profile: payment.profile || {}
       }
     });
 
@@ -109,8 +81,7 @@ export default async function handler(req, res) {
 
     return res.status(500).json({
       success: false,
-      message: "Unable to retrieve payment",
-      error: error.message
+      message: "Unable to retrieve payment"
     });
   }
 }
