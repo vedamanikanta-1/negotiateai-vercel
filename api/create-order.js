@@ -1,50 +1,73 @@
-module.exports = async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
-
-  const apiKey = process.env.INSTAMOJO_API_KEY;
-  const authToken = process.env.INSTAMOJO_AUTH_TOKEN;
-
-  if (!apiKey || !authToken) {
-    return res.status(500).json({ error: "Missing Instamojo credentials" });
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      success: false,
+      message: "Method not allowed"
+    });
   }
 
   try {
-    const params = new URLSearchParams();
-    params.append("purpose", "NegotiateAI Full Report");
-    params.append("amount", "199");
-    params.append("buyer_name", "Customer");
-    params.append("redirect_url", "https://negotiateai-vercel.vercel.app/");
-    params.append("send_email", "false");
-    params.append("send_sms", "false");
-    params.append("allow_repeated_payments", "true");
+    const {
+      email,
+      whatsapp,
+      profile
+    } = req.body || {};
 
-    const response = await fetch("https://www.instamojo.com/api/1.1/payment-requests/", {
-      method: "POST",
-      headers: {
-        "X-Api-Key": apiKey,
-        "X-Auth-Token": authToken,
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: params.toString()
-    });
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required"
+      });
+    }
 
-    const data = await response.json();
+    const paymentId =
+      "NEG-" +
+      Date.now() +
+      "-" +
+      Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    if (!data.success) {
-      return res.status(500).json({ error: "Order creation failed", details: data });
+    const payment = {
+      paymentId,
+      email,
+      whatsapp: whatsapp || "",
+      profile: profile || {},
+      amount: 199,
+      status: "PENDING",
+      createdAt: new Date().toISOString()
+    };
+
+    // Vercel KV / Redis
+    const response = await fetch(
+      `${process.env.KV_REST_API_URL}/set/payment:${paymentId}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          value: JSON.stringify(payment)
+        })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to save payment");
     }
 
     return res.status(200).json({
-      paymentRequestId: data.payment_request.id,
-      paymentUrl: data.payment_request.longurl
+      success: true,
+      paymentId,
+      amount: 199,
+      upiId: process.env.UPI_ID
     });
 
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to create payment request"
+    });
   }
-};
+}
