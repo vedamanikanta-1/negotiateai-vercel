@@ -581,7 +581,7 @@ module.exports = async function handler(req, res) {
                 "NegotiateAI <onboarding@resend.dev>",
 
               to: [
-                payment.email
+                "24981a05p5@raghuenggcollege.in"
               ],
 
               subject:
