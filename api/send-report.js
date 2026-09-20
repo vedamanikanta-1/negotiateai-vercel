@@ -9,42 +9,36 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-
 function reportToHtml(report) {
-
-  const companyRows =
-    (report.companyWiseSalaries || [])
-      .map(company => `
+  const companyRows = (report.companyWiseSalaries || [])
+    .map(
+      (company) => `
         <tr>
           <td>${escapeHtml(company.company)}</td>
           <td>${escapeHtml(company.range)}</td>
           <td>${escapeHtml(company.notes)}</td>
         </tr>
-      `)
-      .join("");
+      `
+    )
+    .join("");
 
-  const actionPlan =
-    (report.actionPlan || [])
-      .map(item => `<li>${escapeHtml(item)}</li>`)
-      .join("");
+  const actionPlan = (report.actionPlan || [])
+    .map((item) => `<li>${escapeHtml(item)}</li>`)
+    .join("");
 
-  const redFlags =
-    (report.redFlags || [])
-      .map(item => `<li>${escapeHtml(item)}</li>`)
-      .join("");
+  const redFlags = (report.redFlags || [])
+    .map((item) => `<li>${escapeHtml(item)}</li>`)
+    .join("");
 
-  const skills =
-    (report.skillsToAdd || [])
-      .map(item => `<li>${escapeHtml(item)}</li>`)
-      .join("");
+  const skills = (report.skillsToAdd || [])
+    .map((item) => `<li>${escapeHtml(item)}</li>`)
+    .join("");
 
   return `
 <!DOCTYPE html>
-
 <html>
 
 <head>
-
 <meta charset="UTF-8">
 
 <style>
@@ -136,7 +130,6 @@ ${companyRows}
 
 </table>
 
-
 <h2>Negotiation Script</h2>
 
 <div class="script">
@@ -163,13 +156,11 @@ ${escapeHtml(report.negotiationScript?.counterOffer)}
 ${escapeHtml(report.negotiationScript?.closing)}
 </div>
 
-
 <h2>Offer Evaluation</h2>
 
 <p>
 ${escapeHtml(report.offerEvaluation)}
 </p>
-
 
 <h2>Action Plan</h2>
 
@@ -177,20 +168,17 @@ ${escapeHtml(report.offerEvaluation)}
 ${actionPlan}
 </ul>
 
-
 <h2>Potential Red Flags</h2>
 
 <ul>
 ${redFlags}
 </ul>
 
-
 <h2>Skills To Add</h2>
 
 <ul>
 ${skills}
 </ul>
-
 
 <div class="footer">
 
@@ -211,6 +199,10 @@ This report provides AI-generated career and salary guidance and should be used 
 
 module.exports = async function handler(req, res) {
 
+  // --------------------------------
+  // 1. Check request method
+  // --------------------------------
+
   if (req.method !== "POST") {
 
     return res.status(405).json({
@@ -220,17 +212,18 @@ module.exports = async function handler(req, res) {
 
   }
 
+
   try {
+
+    // --------------------------------
+    // 2. Read request
+    // --------------------------------
 
     const {
       paymentId,
       adminSecret
     } = req.body || {};
 
-
-    // -----------------------------
-    // 1. Validate request
-    // -----------------------------
 
     if (!paymentId || !adminSecret) {
 
@@ -243,9 +236,9 @@ module.exports = async function handler(req, res) {
     }
 
 
-    // -----------------------------
-    // 2. Verify admin
-    // -----------------------------
+    // --------------------------------
+    // 3. Verify admin
+    // --------------------------------
 
     if (
       adminSecret !==
@@ -260,9 +253,9 @@ module.exports = async function handler(req, res) {
     }
 
 
-    // -----------------------------
-    // 3. Get payment
-    // -----------------------------
+    // --------------------------------
+    // 4. Get payment from Redis
+    // --------------------------------
 
     const getResponse = await fetch(
       `${process.env.KV_REST_API_URL}/get/payment:${encodeURIComponent(paymentId)}`,
@@ -290,7 +283,10 @@ module.exports = async function handler(req, res) {
       await getResponse.json();
 
 
-    if (!paymentData.result) {
+    if (
+      paymentData.result === null ||
+      paymentData.result === undefined
+    ) {
 
       return res.status(404).json({
         success: false,
@@ -300,13 +296,78 @@ module.exports = async function handler(req, res) {
     }
 
 
-    const payment =
-      JSON.parse(paymentData.result);
+    // --------------------------------
+    // 5. Parse Redis response
+    // --------------------------------
+    //
+    // Actual structure:
+    //
+    // result
+    //   ↓
+    // JSON wrapper
+    //   ↓
+    // value
+    //   ↓
+    // JSON payment object
+    //
+
+    let redisWrapper =
+      paymentData.result;
 
 
-    // -----------------------------
-    // 4. Check payment status
-    // -----------------------------
+    if (
+      typeof redisWrapper === "string"
+    ) {
+
+      redisWrapper =
+        JSON.parse(redisWrapper);
+
+    }
+
+
+    let payment =
+      redisWrapper.value;
+
+
+    if (
+      typeof payment === "string"
+    ) {
+
+      payment =
+        JSON.parse(payment);
+
+    }
+
+
+    if (!payment) {
+
+      return res.status(404).json({
+        success: false,
+        message:
+          "Payment data is empty"
+      });
+
+    }
+
+
+    console.log(
+      "Payment retrieved:",
+      {
+        paymentId:
+          payment.paymentId,
+
+        status:
+          payment.status,
+
+        email:
+          payment.email
+      }
+    );
+
+
+    // --------------------------------
+    // 6. Check payment status
+    // --------------------------------
 
     if (
       payment.status !==
@@ -325,9 +386,9 @@ module.exports = async function handler(req, res) {
     }
 
 
-    // -----------------------------
-    // 5. Generate AI report
-    // -----------------------------
+    // --------------------------------
+    // 7. Generate AI report
+    // --------------------------------
 
     console.log(
       `Generating report for ${paymentId}`
@@ -340,9 +401,23 @@ module.exports = async function handler(req, res) {
       );
 
 
-    // -----------------------------
-    // 6. Save report
-    // -----------------------------
+    if (!report) {
+
+      throw new Error(
+        "AI report generation returned empty result"
+      );
+
+    }
+
+
+    console.log(
+      `Report generated for ${paymentId}`
+    );
+
+
+    // --------------------------------
+    // 8. Save generated report
+    // --------------------------------
 
     const reportRecord = {
 
@@ -364,7 +439,7 @@ module.exports = async function handler(req, res) {
 
     const reportSaveResponse =
       await fetch(
-        `${process.env.KV_REST_API_URL}/set/report:${paymentId}`,
+        `${process.env.KV_REST_API_URL}/set/report:${encodeURIComponent(paymentId)}`,
 
         {
 
@@ -400,15 +475,17 @@ module.exports = async function handler(req, res) {
     }
 
 
-    // -----------------------------
-    // 7. Update payment
-    // -----------------------------
+    // --------------------------------
+    // 9. Update payment status
+    // --------------------------------
 
     payment.status =
       "VERIFIED";
 
+
     payment.verifiedAt =
       new Date().toISOString();
+
 
     payment.reportKey =
       `report:${paymentId}`;
@@ -454,20 +531,29 @@ module.exports = async function handler(req, res) {
     }
 
 
-    // -----------------------------
-    // 8. Generate email HTML
-    // -----------------------------
+    console.log(
+      `Payment ${paymentId} marked as VERIFIED`
+    );
+
+
+    // --------------------------------
+    // 10. Generate email HTML
+    // --------------------------------
 
     const emailHtml =
       reportToHtml(report);
 
 
-    // -----------------------------
-    // 9. Send email
-    // -----------------------------
+    // --------------------------------
+    // 11. Send email through Resend
+    // --------------------------------
+
+    let emailSent = false;
+
 
     if (
-      process.env.RESEND_API_KEY
+      process.env.RESEND_API_KEY &&
+      payment.email
     ) {
 
       const emailResponse =
@@ -515,30 +601,41 @@ module.exports = async function handler(req, res) {
         const errorText =
           await emailResponse.text();
 
+
         console.error(
           "Resend error:",
           errorText
         );
 
-        // Payment is still verified
-        // even if email fails.
+      } else {
+
+        emailSent = true;
+
+        console.log(
+          `Report email sent to ${payment.email}`
+        );
+
       }
 
     }
 
 
-    // -----------------------------
-    // 10. Return success
-    // -----------------------------
+    // --------------------------------
+    // 12. Return success
+    // --------------------------------
 
     return res.status(200).json({
 
       success: true,
 
       message:
-        "Payment verified, report generated and customer notified",
+        emailSent
+          ? "Payment verified, report generated and customer notified"
+          : "Payment verified and report generated",
 
-      paymentId
+      paymentId,
+
+      emailSent
 
     });
 
