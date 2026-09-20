@@ -39,44 +39,42 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    console.log("RAW REDIS RESULT:", data);
-
-    if (data.result === null || data.result === undefined) {
+    if (!data.result) {
       return res.status(404).json({
         success: false,
         message: "Payment not found"
       });
     }
 
-    let payment = data.result;
+    /*
+      Redis response structure:
 
-    // Redis may return a JSON string
+      data.result
+        -> JSON string
+          -> {
+               "value": "JSON payment object"
+             }
+    */
+
+    let redisWrapper = data.result;
+
+    if (typeof redisWrapper === "string") {
+      redisWrapper = JSON.parse(redisWrapper);
+    }
+
+    let payment = redisWrapper.value;
+
     if (typeof payment === "string") {
       payment = JSON.parse(payment);
     }
 
-    // Handle accidental nested payment object
-    if (payment && payment.payment) {
-      payment = payment.payment;
-    }
-
-    console.log("NORMALIZED PAYMENT:", payment);
-
     return res.status(200).json({
       success: true,
-      payment: {
-        paymentId: payment.paymentId || paymentId,
-        amount: payment.amount || 199,
-        email: payment.email || "",
-        whatsapp: payment.whatsapp || "",
-        utr: payment.utr || "",
-        status: payment.status || "UNKNOWN",
-        createdAt: payment.createdAt || "",
-        profile: payment.profile || {}
-      }
+      payment: payment
     });
 
   } catch (error) {
+
     console.error("Get payment error:", error);
 
     return res.status(500).json({
