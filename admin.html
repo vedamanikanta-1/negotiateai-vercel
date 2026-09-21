@@ -2,345 +2,636 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>NegotiateAI Admin</title>
+<meta charset="UTF-8">
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f7fb;
-      margin: 0;
-      padding: 30px;
-    }
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
-    .container {
-      max-width: 1100px;
-      margin: auto;
-    }
+<title>NegotiateAI Admin</title>
 
-    h1 {
-      margin-bottom: 5px;
-    }
+<style>
 
-    .subtitle {
-      color: #666;
-      margin-bottom: 30px;
-    }
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f7fb;
+  margin: 0;
+  padding: 30px;
+}
 
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      box-shadow: 0 3px 15px rgba(0,0,0,0.08);
-    }
+.container {
+  max-width: 1100px;
+  margin: auto;
+}
 
-    input {
-      padding: 12px;
-      width: 100%;
-      max-width: 400px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      box-sizing: border-box;
-    }
+h1 {
+  margin-bottom: 5px;
+}
 
-    button {
-      padding: 11px 18px;
-      border: none;
-      border-radius: 7px;
-      cursor: pointer;
-      font-weight: bold;
-    }
+.subtitle {
+  color: #666;
+  margin-bottom: 30px;
+}
 
-    .verify {
-      background: #111;
-      color: white;
-    }
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+}
 
-    .reject {
-      background: #eee;
-      color: #111;
-    }
+input {
+  padding: 12px;
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
 
-    .payment {
-      border: 1px solid #eee;
-      border-radius: 10px;
-      padding: 18px;
-      margin-bottom: 15px;
-    }
+button {
+  padding: 11px 18px;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 8px;
+  margin-top: 8px;
+}
 
-    .status {
-      display: inline-block;
-      padding: 5px 10px;
-      border-radius: 20px;
-      background: #fff3cd;
-      color: #856404;
-      font-size: 13px;
-    }
+.verify {
+  background: #111;
+  color: white;
+}
 
-    .success {
-      color: green;
-    }
+.reject {
+  background: #eee;
+  color: #111;
+}
 
-    .error {
-      color: red;
-    }
-  </style>
+.download {
+  background: #ff7a00;
+  color: white;
+}
+
+.payment {
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 15px;
+}
+
+.status {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: #fff3cd;
+  color: #856404;
+  font-size: 13px;
+}
+
+.success {
+  color: green;
+}
+
+.error {
+  color: red;
+}
+
+</style>
+
 </head>
+
 
 <body>
 
 <div class="container">
 
-  <h1>NegotiateAI Admin</h1>
-  <div class="subtitle">
-    Payment verification dashboard
-  </div>
+<h1>
+NegotiateAI Admin
+</h1>
 
-  <div class="card">
+<div class="subtitle">
+Payment verification dashboard
+</div>
 
-    <h3>Admin Authentication</h3>
 
-    <input
-      type="password"
-      id="adminSecret"
-      placeholder="Enter admin secret"
-    >
+<div class="card">
 
-    <button onclick="loadPayment()">
-      Load Payment
-    </button>
+<h3>
+Admin Authentication
+</h3>
 
-  </div>
-
-  <div class="card">
-
-    <h3>Find Payment</h3>
-
-    <input
-      type="text"
-      id="paymentId"
-      placeholder="NEG-XXXXXXXX"
-    >
-
-    <button onclick="loadPayment()">
-      Search
-    </button>
-
-  </div>
-
-  <div id="paymentContainer"></div>
+<input
+type="password"
+id="adminSecret"
+placeholder="Enter admin secret"
+>
 
 </div>
 
+
+<div class="card">
+
+<h3>
+Find Payment
+</h3>
+
+<input
+type="text"
+id="paymentId"
+placeholder="NEG-XXXXXXXX"
+>
+
+<br>
+
+<button
+onclick="loadPayment()">
+
+Search
+
+</button>
+
+</div>
+
+
+<div id="paymentContainer"></div>
+
+</div>
+
+
 <script>
+
 
 async function loadPayment() {
 
   const paymentId =
-    document.getElementById("paymentId").value.trim();
+    document
+      .getElementById("paymentId")
+      .value
+      .trim();
 
   const adminSecret =
-    document.getElementById("adminSecret").value.trim();
+    document
+      .getElementById("adminSecret")
+      .value
+      .trim();
+
 
   if (!paymentId || !adminSecret) {
-    alert("Enter payment ID and admin secret.");
+
+    alert(
+      "Enter payment ID and admin secret."
+    );
+
     return;
+
   }
+
 
   try {
 
-    /*
-      IMPORTANT:
+    const response =
+      await fetch(
+        `/api/get-payment?paymentId=${encodeURIComponent(paymentId)}&adminSecret=${encodeURIComponent(adminSecret)}`
+      );
 
-      This example expects an API endpoint
-      that reads a payment from KV.
 
-      Create /api/get-payment.js
-      if you want direct searching from the dashboard.
-    */
+    const data =
+      await response.json();
 
-    const response = await fetch(
-      `/api/get-payment?paymentId=${encodeURIComponent(paymentId)}&adminSecret=${encodeURIComponent(adminSecret)}`
-    );
-
-    const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || "Payment not found");
+
+      throw new Error(
+        data.message ||
+        "Payment not found"
+      );
+
     }
 
-    displayPayment(data.payment);
+
+    displayPayment(
+      data.payment
+    );
+
 
   } catch (error) {
 
-    document.getElementById("paymentContainer").innerHTML =
-      `<p class="error">${error.message}</p>`;
+    document
+      .getElementById(
+        "paymentContainer"
+      )
+      .innerHTML =
+      `<p class="error">
+        ${error.message}
+      </p>`;
 
   }
+
 }
 
 
 function displayPayment(payment) {
 
   const container =
-    document.getElementById("paymentContainer");
+    document.getElementById(
+      "paymentContainer"
+    );
+
+
+  let actionButtons = "";
+
+
+  if (
+    payment.status ===
+    "PAYMENT_SUBMITTED"
+  ) {
+
+    actionButtons = `
+
+      <button
+        class="verify"
+        onclick="verifyPayment('${payment.paymentId}')">
+
+        ✓ Verify Payment
+
+      </button>
+
+
+      <button
+        class="reject"
+        onclick="rejectPayment('${payment.paymentId}')">
+
+        Reject
+
+      </button>
+
+    `;
+
+  }
+
+
+  if (
+    payment.status ===
+    "VERIFIED"
+  ) {
+
+    actionButtons = `
+
+      <button
+        class="download"
+        onclick="downloadReport('${payment.paymentId}')">
+
+        ↓ Download Full Report
+
+      </button>
+
+    `;
+
+  }
+
 
   container.innerHTML = `
 
     <div class="card payment">
 
-      <h2>Payment Details</h2>
+      <h2>
+        Payment Details
+      </h2>
+
 
       <p>
-        <strong>Payment ID:</strong>
+        <strong>
+          Payment ID:
+        </strong>
+
         ${payment.paymentId}
       </p>
 
+
       <p>
-        <strong>Amount:</strong>
+        <strong>
+          Amount:
+        </strong>
+
         ₹${payment.amount}
       </p>
 
+
       <p>
-        <strong>Email:</strong>
+        <strong>
+          Email:
+        </strong>
+
         ${payment.email}
       </p>
 
+
       <p>
-        <strong>WhatsApp:</strong>
+        <strong>
+          WhatsApp:
+        </strong>
+
         ${payment.whatsapp || "Not provided"}
       </p>
 
+
       <p>
-        <strong>UTR:</strong>
+        <strong>
+          UTR:
+        </strong>
+
         ${payment.utr || "Not submitted"}
       </p>
 
+
       <p>
-        <strong>Status:</strong>
+        <strong>
+          Status:
+        </strong>
+
         <span class="status">
+
           ${payment.status}
+
         </span>
+
       </p>
 
-      ${
-        payment.status === "PAYMENT_SUBMITTED"
-        ? `
-          <button
-            class="verify"
-            onclick="verifyPayment('${payment.paymentId}')">
-            ✓ Verify Payment
-          </button>
 
-          <button
-            class="reject"
-            onclick="rejectPayment('${payment.paymentId}')">
-            Reject
-          </button>
-        `
-        : ""
-      }
+      ${actionButtons}
 
     </div>
 
   `;
+
 }
 
 
-async function verifyPayment(paymentId) {
+async function verifyPayment(
+  paymentId
+) {
 
   const adminSecret =
-    document.getElementById("adminSecret").value.trim();
+    document
+      .getElementById(
+        "adminSecret"
+      )
+      .value
+      .trim();
+
 
   if (!confirm(
     "Have you confirmed this UTR in your UPI/bank transaction history?"
   )) {
+
     return;
+
   }
+
 
   try {
 
-    const response = await fetch(
-      "/api/send-report",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          paymentId,
-          adminSecret
-        })
-      }
-    );
+    const response =
+      await fetch(
+        "/api/send-report",
+        {
 
-    const data = await response.json();
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+
+            paymentId,
+
+            adminSecret
+
+          })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
 
     if (!response.ok) {
-      throw new Error(data.message);
+
+      throw new Error(
+        data.message ||
+        "Verification failed"
+      );
+
     }
 
+
     alert(
-      "Payment verified. Customer has been notified."
+      "Payment verified and report generated successfully."
     );
+
 
     loadPayment();
 
+
   } catch (error) {
 
-    alert(error.message);
+    alert(
+      error.message
+    );
 
   }
+
 }
 
 
-async function rejectPayment(paymentId) {
+async function rejectPayment(
+  paymentId
+) {
 
   const adminSecret =
-    document.getElementById("adminSecret").value.trim();
+    document
+      .getElementById(
+        "adminSecret"
+      )
+      .value
+      .trim();
 
-  if (!confirm("Reject this payment submission?")) {
+
+  if (!confirm(
+    "Reject this payment submission?"
+  )) {
+
     return;
+
   }
+
 
   try {
 
-    const response = await fetch(
-      "/api/reject-payment",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          paymentId,
-          adminSecret
-        })
-      }
-    );
+    const response =
+      await fetch(
+        "/api/reject-payment",
+        {
 
-    const data = await response.json();
+          method: "POST",
+
+          headers: {
+
+            "Content-Type":
+              "application/json"
+
+          },
+
+          body: JSON.stringify({
+
+            paymentId,
+
+            adminSecret
+
+          })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
 
     if (!response.ok) {
-      throw new Error(data.message);
+
+      throw new Error(
+        data.message ||
+        "Rejection failed"
+      );
+
     }
 
-    alert("Payment rejected.");
+
+    alert(
+      "Payment rejected."
+    );
+
 
     loadPayment();
 
+
   } catch (error) {
 
-    alert(error.message);
+    alert(
+      error.message
+    );
 
   }
+
+}
+
+
+async function downloadReport(
+  paymentId
+) {
+
+  const adminSecret =
+    document
+      .getElementById(
+        "adminSecret"
+      )
+      .value
+      .trim();
+
+
+  if (!adminSecret) {
+
+    alert(
+      "Enter admin secret first."
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    const url =
+      `/api/get-report?paymentId=${encodeURIComponent(paymentId)}&adminSecret=${encodeURIComponent(adminSecret)}`;
+
+
+    const response =
+      await fetch(url);
+
+
+    if (!response.ok) {
+
+      const data =
+        await response.json();
+
+      throw new Error(
+        data.message ||
+        "Unable to download report"
+      );
+
+    }
+
+
+    const blob =
+      await response.blob();
+
+
+    const downloadUrl =
+      window.URL.createObjectURL(
+        blob
+      );
+
+
+    const link =
+      document.createElement("a");
+
+
+    link.href =
+      downloadUrl;
+
+
+    link.download =
+      `NegotiateAI-Report-${paymentId}.html`;
+
+
+    document.body.appendChild(
+      link
+    );
+
+
+    link.click();
+
+
+    link.remove();
+
+
+    window.URL.revokeObjectURL(
+      downloadUrl
+    );
+
+
+  } catch (error) {
+
+    alert(
+      error.message
+    );
+
+  }
+
 }
 
 </script>
 
 </body>
+
 </html>
